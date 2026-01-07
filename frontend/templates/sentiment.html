@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+{% block title %}Customer Sentiment Analysis{% endblock %}
+
+{% block content %}
+
+<h2 style="text-align:center; margin:40px 0 30px; color:#1e40af; font-size:2.4em;">
+  💬 Customer Sentiment Analysis
+</h2>
+
+<!-- SUMMARY CARDS -->
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px,1fr)); gap:25px; margin-bottom:40px;">
+  <div class="card" style="text-align:center; padding:30px;">
+    <h4 style="color:#4b5563;">Total Reviews Analyzed</h4>
+    <p id="totalReviews" style="font-size:32px; font-weight:bold; color:#3b82f6; margin:10px 0;">—</p>
+  </div>
+  <div class="card" style="text-align:center; padding:30px;">
+    <h4 style="color:#4b5563;">Average Sentiment Score</h4>
+    <p id="avgSentiment" style="font-size:32px; font-weight:bold; color:#f59e0b; margin:10px 0;">—</p>
+    <small style="color:#6b7280;">(-1 = Very Negative, +1 = Very Positive)</small>
+  </div>
+  <div class="card" style="text-align:center; padding:30px;">
+    <h4 style="color:#4b5563;">Overall Mood</h4>
+    <p id="overallMood" style="font-size:36px; font-weight:bold; margin:10px 0;">—</p>
+  </div>
+</div>
+
+<!-- CHART + INDICATORS SECTION (TO BE CAPTURED) -->
+<div class="card" style="padding:60px 40px; margin-bottom:40px;" id="sentimentCaptureSection">
+  <h3 style="text-align:center; margin-bottom:40px; color:#1e293b; font-size:1.8em;">Sentiment Distribution</h3>
+  
+  <div style="display:flex; align-items:center; justify-content:center; gap:140px; flex-wrap:wrap; max-width:1300px; margin:0 auto;">
+    <!-- Centered Doughnut Chart -->
+    <div style="width:450px; height:450px; display:flex; align-items:center; justify-content:center;">
+      <canvas id="sentimentChart"></canvas>
+    </div>
+    
+    <!-- Indicators on the Right -->
+    <div style="min-width:300px; padding-left:20px;">
+      <div style="margin-bottom:50px;">
+        <div style="display:flex; align-items:center; gap:18px; margin-bottom:12px;">
+          <div style="width:32px; height:32px; background:#22c55e; border-radius:50%;"></div>
+          <h4 style="margin:0; color:#166534; font-size:24px;">Positive 😊</h4>
+        </div>
+        <p id="positiveIndicator" style="margin:0; font-size:40px; font-weight:bold; color:#166534;">—</p>
+      </div>
+      
+      <div style="margin-bottom:50px;">
+        <div style="display:flex; align-items:center; gap:18px; margin-bottom:12px;">
+          <div style="width:32px; height:32px; background:#eab308; border-radius:50%;"></div>
+          <h4 style="margin:0; color:#a16207; font-size:24px;">Neutral 😐</h4>
+        </div>
+        <p id="neutralIndicator" style="margin:0; font-size:40px; font-weight:bold; color:#a16207;">—</p>
+      </div>
+      
+      <div>
+        <div style="display:flex; align-items:center; gap:18px; margin-bottom:12px;">
+          <div style="width:32px; height:32px; background:#ef4444; border-radius:50%;"></div>
+          <h4 style="margin:0; color:#991b1b; font-size:24px;">Negative 😞</h4>
+        </div>
+        <p id="negativeIndicator" style="margin:0; font-size:40px; font-weight:bold; color:#991b1b;">—</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AI INSIGHT -->
+<div class="card" style="margin-bottom:40px; padding:30px;">
+  <h3 style="margin-bottom:15px; color:#1e293b;">🤖 AI Insight</h3>
+  <p id="sentimentInsight" style="font-size:16px; line-height:1.6; color:#374151;">
+    Loading sentiment analysis...
+  </p>
+</div>
+
+<!-- SAMPLE REVIEWS -->
+<div class="card" style="margin-bottom:40px; padding:30px;">
+  <details open style="margin-bottom:20px;">
+    <summary style="font-size:19px; font-weight:bold; cursor:pointer; color:#166534;">
+      📗 Top Positive Reviews (Sample)
+    </summary>
+    <ul id="positiveReviews" style="margin-top:15px; padding-left:20px; color:#166534;"></ul>
+  </details>
+
+  <details open>
+    <summary style="font-size:19px; font-weight:bold; cursor:pointer; color:#dc2626;">
+      📕 Top Negative Reviews (Sample)
+    </summary>
+    <ul id="negativeReviews" style="margin-top:15px; padding-left:20px; color:#dc2626;"></ul>
+  </details>
+</div>
+
+<!-- PDF DOWNLOAD -->
+<div class="card" style="text-align:center; padding:30px;">
+  <button id="downloadPdfBtn" onclick="downloadSentimentPDF()" 
+          style="padding:14px 32px; font-size:18px; background:#22c55e; color:white; border:none; border-radius:12px; cursor:pointer;">
+    📄 Download Sentiment Report (PDF)
+  </button>
+</div>
+
+<!-- Required Libraries -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+
+<script>
+let sentimentChart = null;
+
+fetch("/sentiment")
+  .then(r => {
+    if (!r.ok) throw new Error("No reviews");
+    return r.json();
+  })
+  .then(data => {
+    const total = data.total_reviews || 0;
+
+    // Summary cards
+    document.getElementById("totalReviews").innerText = total.toLocaleString();
+    document.getElementById("avgSentiment").innerText = data.avg_sentiment > 0 ? "+" + data.avg_sentiment : data.avg_sentiment;
+    document.getElementById("overallMood").innerText = data.mood;
+    document.getElementById("overallMood").style.color = 
+      data.mood.includes("Positive") ? "#16a34a" : data.mood.includes("Negative") ? "#dc2626" : "#6b7280";
+
+    document.getElementById("sentimentInsight").innerText = data.insight || "Balanced customer feedback.";
+
+    // Sample reviews
+    const posList = document.getElementById("positiveReviews");
+    const negList = document.getElementById("negativeReviews");
+    posList.innerHTML = ""; negList.innerHTML = "";
+    (data.positive_samples || []).slice(0, 5).forEach(r => {
+      const li = document.createElement("li"); li.textContent = r; li.style.marginBottom = "12px"; posList.appendChild(li);
+    });
+    (data.negative_samples || []).slice(0, 5).forEach(r => {
+      const li = document.createElement("li"); li.textContent = r; li.style.marginBottom = "12px"; negList.appendChild(li);
+    });
+
+    // Indicators
+    const posCount = data.positive_count || 0;
+    const neuCount = data.neutral_count || 0;
+    const negCount = data.negative_count || 0;
+    
+    const posPct = total ? Math.round((posCount / total) * 100) : 0;
+    const neuPct = total ? Math.round((neuCount / total) * 100) : 0;
+    const negPct = total ? Math.round((negCount / total) * 100) : 0;
+
+    document.getElementById("positiveIndicator").innerText = `${posCount.toLocaleString()} (${posPct}%)`;
+    document.getElementById("neutralIndicator").innerText = `${neuCount.toLocaleString()} (${neuPct}%)`;
+    document.getElementById("negativeIndicator").innerText = `${negCount.toLocaleString()} (${negPct}%)`;
+
+    // Doughnut chart
+    if (sentimentChart) sentimentChart.destroy();
+    const ctx = document.getElementById("sentimentChart").getContext("2d");
+    sentimentChart = new Chart(ctx, {
+      type: "doughnut",
+      data: {
+        datasets: [{
+          data: [posCount, neuCount, negCount],
+          backgroundColor: ["#22c55e", "#eab308", "#ef4444"],
+          borderWidth: 6,
+          borderColor: "#ffffff"
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: { legend: { display: false } },
+        cutout: "65%"
+      }
+    });
+  })
+  .catch(() => {
+    document.getElementById("sentimentInsight").innerText = 
+      "No reviews uploaded. Please include a reviews.csv with 'review_text' column.";
+  });
+
+// UPDATED PDF DOWNLOAD - CAPTURES FULL VIEW
+function downloadSentimentPDF() {
+  const captureSection = document.getElementById("sentimentCaptureSection");
+  if (!captureSection) return alert("Section not ready.");
+
+  const button = document.getElementById("downloadPdfBtn");
+  const original = button.innerText;
+  button.disabled = true;
+  button.innerText = "⏳ Generating PDF...";
+
+  html2canvas(captureSection, {
+    scale: 2,
+    useCORS: true,
+    backgroundColor: "#ffffff",
+    logging: false
+  }).then(canvas => {
+    const imgData = canvas.toDataURL("image/png");
+
+    fetch("/download-sentiment-pdf", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chart_image: imgData })
+    })
+    .then(res => res.blob())
+    .then(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "Customer_Sentiment_Report.pdf";
+      a.click();
+      URL.revokeObjectURL(url);
+    })
+    .catch(err => {
+      alert("PDF generation failed.");
+      console.error(err);
+    })
+    .finally(() => {
+      button.disabled = false;
+      button.innerText = original;
+    });
+  }).catch(err => {
+    alert("Capture failed. Try again.");
+    console.error(err);
+    button.disabled = false;
+    button.innerText = original;
+  });
+}
+</script>
+
+<style>
+  @media (max-width: 1000px) {
+    div[style*="gap:140px"] { gap: 60px !important; }
+    div[style*="width:450px"] { width: 380px !important; height: 380px !important; }
+  }
+  @media (max-width: 768px) {
+    div[style*="display:flex; align-items:center; justify-content:center; gap:140px"] {
+      flex-direction: column;
+    }
+    div[style*="min-width:300px"] { padding-left: 0; text-align: center; }
+  }
+</style>
+
+{% endblock %}

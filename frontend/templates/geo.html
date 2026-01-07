@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2 style="text-align:center; margin:40px 0 20px; color:#1e40af; font-size:2.4em;">
+  🌍 Geospatial Sales Analysis
+</h2>
+
+<!-- SUMMARY CARDS -->
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px,1fr)); gap:25px; margin-bottom:40px;">
+  <div class="card" style="text-align:center; padding:30px;">
+    <h4 style="color:#4b5563;">Total Regions</h4>
+    <p id="totalRegions" style="font-size:32px; font-weight:bold; color:#3b82f6; margin:10px 0;">—</p>
+  </div>
+  <div class="card" style="text-align:center; padding:30px;">
+    <h4 style="color:#4b5563;">Top Performing Region</h4>
+    <p id="topRegion" style="font-size:28px; font-weight:bold; color:#16a34a; margin:10px 0;">—</p>
+  </div>
+  <div class="card" style="text-align:center; padding:30px;">
+    <h4 style="color:#4b5563;">Top Selling Product</h4>
+    <p id="topProduct" style="font-size:28px; font-weight:bold; color:#dc2626; margin:10px 0;">—</p>
+  </div>
+</div>
+
+<!-- INDIA MAP -->
+<div class="card" style="padding:0; overflow:hidden; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,0.1); margin-bottom:40px;">
+  <div id="indiaMap" style="height:500px;"></div>
+</div>
+
+<!-- BAR CHART
+<div class="card" style="margin-bottom:40px;">
+  <h3 style="text-align:center; margin-bottom:20px; color:#1e40af;">Revenue by Region</h3>
+  <canvas id="geoChart" height="200"></canvas>
+</div> -->
+
+<!-- BAR CHART (Medium Size) -->
+<div class="card" style="margin-bottom:50px;">
+  <h3 style="text-align:center; margin-bottom:25px; color:#1e40af; font-size:1.8em;">
+    Revenue by Region
+  </h3>
+  <div style="max-width:800px; margin:0 auto; padding:0 20px;">
+    <canvas id="geoChart" height="300"></canvas>
+  </div>
+</div>
+
+
+<!-- TABLE -->
+<div class="card">
+  <h3 style="text-align:center; margin-bottom:20px; color:#1e40af;">📍 Region-wise Performance Details</h3>
+  <div style="overflow-x:auto;">
+    <table style="width:100%; border-collapse:collapse; min-width:600px;">
+      <thead>
+        <tr style="background:#1e40af; color:white;">
+          <th style="padding:16px; text-align:left;">Region</th>
+          <th style="padding:16px; text-align:center;">Total Units</th>
+          <th style="padding:16px; text-align:center;">Revenue (₹)</th>
+          <th style="padding:16px; text-align:center;">Top Product</th>
+          <th style="padding:16px; text-align:center;">Performance</th>
+        </tr>
+      </thead>
+      <tbody id="geoTableBody" style="text-align:center;"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- PDF DOWNLOAD -->
+<div style="text-align:center; margin:50px 0;">
+  <button onclick="downloadGeoPDF()" id="pdfBtn"
+          style="padding:18px 40px; font-size:20px; background:#1e40af; color:white; border:none; border-radius:16px; cursor:pointer; box-shadow:0 8px 25px rgba(30,64,175,0.3); font-weight:bold;">
+    📄 Download Geospatial Report (PDF)
+  </button>
+</div>
+
+<!-- Leaflet CSS & JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-image@0.4.0/leaflet-image.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+const regionCoords = {
+  North: [28.6139, 77.2090],  // Delhi
+  South: [13.0827, 80.2707],  // Chennai
+  East:  [22.5726, 88.3639],  // Kolkata
+  West:  [19.0760, 72.8777]   // Mumbai
+};
+
+function getColor(perf) {
+  return perf === "High" ? "#16a34a" :
+         perf === "Medium" ? "#f59e0b" :
+         "#dc2626";
+}
+
+function getRadius(revenue) {
+  return Math.max(15, Math.sqrt(revenue / 50000) * 8);
+}
+
+// Initialize map
+const map = L.map("indiaMap").setView([20.5937, 78.9629], 5);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
+
+fetch("/geo-analysis")
+  .then(r => r.json())
+  .then(res => {
+    const { summary, regions } = res;
+
+    // Update summary
+    document.getElementById("totalRegions").innerText = summary.total_regions;
+    document.getElementById("topRegion").innerText = summary.top_region;
+    document.getElementById("topProduct").innerText = summary.top_product;
+
+    // Add markers
+    regions.forEach(r => {
+      if (!regionCoords[r.region]) return;
+
+      const marker = L.circleMarker(regionCoords[r.region], {
+        radius: getRadius(r.total_revenue),
+        color: getColor(r.performance),
+        fillColor: getColor(r.performance),
+        fillOpacity: 0.8,
+        weight: 3
+      }).addTo(map);
+
+      marker.bindPopup(`
+        <div style="font-size:14px; line-height:1.6;">
+          <b>${r.region} Region</b><br>
+          Units Sold: <b>${r.total_units.toLocaleString()}</b><br>
+          Revenue: <b>₹${r.total_revenue.toLocaleString()}</b><br>
+          Top Product: <b>${r.top_product}</b><br>
+          Performance: <b style="color:${getColor(r.performance)}">${r.performance}</b>
+        </div>
+      `);
+    });
+
+    // Bar chart
+    new Chart(document.getElementById("geoChart"), {
+      type: "bar",
+      data: {
+        labels: regions.map(r => r.region),
+        datasets: [{
+          label: "Total Revenue (₹)",
+          data: regions.map(r => r.total_revenue),
+          backgroundColor: "#38bdf8",
+          borderRadius: 8
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } }
+      }
+    });
+
+    // Table
+    const tbody = document.getElementById("geoTableBody");
+    tbody.innerHTML = regions.map(r => `
+      <tr style="border-bottom:1px solid #e2e8f0;">
+        <td style="padding:16px; text-align:left; font-weight:600;">${r.region}</td>
+        <td style="padding:16px;">${r.total_units.toLocaleString()}</td>
+        <td style="padding:16px;">₹${r.total_revenue.toLocaleString()}</td>
+        <td style="padding:16px;">${r.top_product}</td>
+        <td style="padding:16px;">
+          <span style="padding:8px 16px; border-radius:12px; font-weight:bold; color:white; background:${getColor(r.performance)};">
+            ${r.performance}
+          </span>
+        </td>
+      </tr>
+    `).join("");
+  })
+  .catch(err => {
+    console.error("Geo load failed:", err);
+    document.getElementById("totalRegions").innerText = "Error";
+  });
+
+// PDF Download
+function downloadGeoPDF() {
+  const btn = document.getElementById("pdfBtn");
+  const original = btn.innerText;
+  btn.disabled = true;
+  btn.innerText = "⏳ Generating PDF...";
+
+  setTimeout(() => {
+    leafletImage(map, (err, canvas) => {
+      if (err || !canvas) {
+        alert("Failed to capture map");
+        btn.disabled = false;
+        btn.innerText = original;
+        return;
+      }
+
+      const imgData = canvas.toDataURL("image/png");
+
+      fetch("/download-geo-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ map_image: imgData })
+      })
+      .then(res => res.blob())
+      .then(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "Geospatial_Sales_Report.pdf";
+        a.click();
+        URL.revokeObjectURL(url);
+      })
+      .catch(() => alert("PDF generation failed"))
+      .finally(() => {
+        btn.disabled = false;
+        btn.innerText = original;
+      });
+    });
+  }, 2000);
+}
+</script>
+
+{% endblock %}

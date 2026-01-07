@@ -1,0 +1,31 @@
+review_id,product_id,review_text,rating,region
+R001,P001,"Excellent sound quality and battery life",5,South
+R002,P001,"Bass is good but connectivity drops sometimes",3,South
+R003,P001,"Worst experience, stopped working in a week",1,North
+R004,P002,"Very stylish and accurate fitness tracking",5,North
+R005,P002,"Battery drains quickly but features are good",3,North
+R006,P002,"Not worth the price",2,East
+R007,P003,"Strong material and good storage space",5,East
+R008,P003,"Zippers feel cheap",2,West
+R009,P003,"Perfect for office and travel",4,East
+R010,P004,"Very comfortable chair for long working hours",5,West
+R011,P004,"Build quality is average",3,West
+R012,P004,"Too expensive for the quality",2,South
+R013,P005,"Loud sound and great bass",5,South
+R014,P005,"Value for money speaker",4,South
+R015,P005,"Sound distorts at high volume",2,North
+R016,P001,"Lightweight and comfortable fit all day",5,West
+R017,P001,"Pairing is seamless with my phone",4,South
+R018,P001,"One earbud stopped working after 2 months",1,East
+R019,P002,"Heart rate monitor is super accurate",5,South
+R020,P002,"App is buggy and crashes often",2,West
+R021,P002,"Great battery life, lasts over a week",5,North
+R022,P003,"Fits my 16-inch laptop perfectly with room",5,South
+R023,P003,"Strap broke within a month of use",1,East
+R024,P003,"Looks premium and gets compliments",4,West
+R025,P004,"Adjustable height and lumbar support are excellent",5,East
+R026,P004,"Armrests feel wobbly and cheap",2,North
+R027,P004,"Best investment for work-from-home setup",5,South
+R028,P005,"Portable and fills the room with sound",5,West
+R029,P005,"Bluetooth range is poor, cuts off easily",2,East
+R030,P005,"Clear vocals and deep bass, highly recommend",5,North

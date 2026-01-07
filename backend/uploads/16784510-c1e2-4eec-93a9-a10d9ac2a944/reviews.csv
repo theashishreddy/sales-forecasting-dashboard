@@ -1,0 +1,20 @@
+review_id,product_id,review_text,rating,region
+R001,P001,"Excellent sound quality and battery life",5,South
+R002,P001,"Bass is good but connectivity drops sometimes",3,South
+R003,P001,"Worst experience, stopped working in a week",1,North
+
+R004,P002,"Very stylish and accurate fitness tracking",5,North
+R005,P002,"Battery drains quickly but features are good",3,North
+R006,P002,"Not worth the price",2,East
+
+R007,P003,"Strong material and good storage space",5,East
+R008,P003,"Zippers feel cheap",2,West
+R009,P003,"Perfect for office and travel",4,East
+
+R010,P004,"Very comfortable chair for long working hours",5,West
+R011,P004,"Build quality is average",3,West
+R012,P004,"Too expensive for the quality",2,South
+
+R013,P005,"Loud sound and great bass",5,South
+R014,P005,"Value for money speaker",4,South
+R015,P005,"Sound distorts at high volume",2,North

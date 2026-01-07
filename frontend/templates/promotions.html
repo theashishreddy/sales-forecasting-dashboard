@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>📢 Promotion Impact Analysis</h2>
+
+<select id="productSelect" style="margin-bottom:15px; padding:6px;">
+  <option value="">All Products (Overall)</option>
+</select>
+
+<div class="card">
+  <canvas id="promoChart" height="120"></canvas>
+</div>
+
+<div class="card" style="margin-top:20px;">
+  <h3>📊 Promotion Summary</h3>
+  <p id="summaryBox">Loading…</p>
+</div>
+
+<div class="card" style="margin-top:20px;">
+  <h3>🤖 AI Recommendation</h3>
+  <p id="aiAdvice">Loading…</p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+let promoChart;
+
+// Load products
+fetch("/products")
+  .then(r => r.json())
+  .then(products => {
+    const select = document.getElementById("productSelect");
+    products.forEach(p => {
+      const opt = document.createElement("option");
+      opt.value = p.product_name;
+      opt.textContent = p.product_name;
+      select.appendChild(opt);
+    });
+    loadPromotion("");
+  });
+
+function loadPromotion(product="") {
+  fetch(`/promotion-impact${product ? `?product=${product}` : ""}`)
+    .then(r => r.json())
+    .then(d => {
+
+      document.getElementById("summaryBox").innerHTML = `
+        <b>Avg Units Sold (Promo):</b> ${d.promo_units}<br>
+        <b>Avg Units Sold (No Promo):</b> ${d.non_promo_units}<br>
+        <b>Avg Revenue (Promo):</b> ₹${d.promo_revenue}<br>
+        <b>Avg Revenue (No Promo):</b> ₹${d.non_promo_revenue}<br>
+        <b>Sales Lift:</b> ${d.lift_percent}%
+      `;
+
+      document.getElementById("aiAdvice").innerText = d.recommendation;
+
+      if (promoChart) promoChart.destroy();
+
+      promoChart = new Chart(document.getElementById("promoChart"), {
+        type: "bar",
+        data: {
+          labels: ["No Promotion", "Promotion"],
+          datasets: [{
+            label: "Average Units Sold",
+            data: [d.non_promo_units, d.promo_units],
+            backgroundColor: ["#94a3b8", "#22c55e"]
+          }]
+        }
+      });
+    });
+}
+
+document.getElementById("productSelect").addEventListener("change", e => {
+  loadPromotion(e.target.value);
+});
+</script>
+
+{% endblock %}

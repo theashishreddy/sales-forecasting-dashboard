@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Upload Sales & Reviews</title>
+</head>
+<body>
+
+<h2>📂 Upload Datasets</h2>
+
+<form method="POST" enctype="multipart/form-data">
+
+    <label><strong>Sales Data (CSV) *</strong></label><br>
+    <input type="file" name="sales_file" accept=".csv" required>
+    <br><br>
+
+    <label><strong>Customer Reviews (CSV)</strong></label><br>
+    <input type="file" name="reviews_file" accept=".csv">
+    <br><br>
+
+    <button type="submit">Upload & Analyze</button>
+
+</form>
+
+<p><em>* Sales file is mandatory. Reviews file is optional.</em></p>
+
+</body>
+</html>

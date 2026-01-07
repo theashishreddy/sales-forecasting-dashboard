@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>🚨 Anomaly Detection</h2>
+
+
+
+<!-- PRODUCT SELECT -->
+<select id="productSelect" style="margin-bottom:15px; padding:6px;">
+  <option value="">All Products (Overall)</option>
+</select>
+
+<!-- CHART -->
+<div class="card">
+  <canvas id="anomalyChart" height="120"></canvas>
+</div>
+
+
+<!-- SUMMARY -->
+<div class="card" style="margin-top:20px;">
+  <h3>📌 Anomaly Summary</h3>
+  <p id="anomalyCount">Loading…</p>
+</div>
+
+<!-- AI EXPLANATION -->
+<div class="card" style="margin-top:20px;">
+  <h3>🤖 AI Anomaly Insight</h3>
+  <p id="aiInsight">Select a product to view insights.</p>
+</div>
+
+<!-- ANOMALY TABLE -->
+<div class="card" style="margin-top:20px;">
+  <h3>📋 Detected Anomalies</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Units Sold</th>
+        <th>Severity</th>
+        <th>Reason</th>
+      </tr>
+    </thead>
+    <tbody id="anomalyTableBody"></tbody>
+
+  </table>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Report pdf -->
+<button onclick="window.location.href='/download-anomaly-pdf'">
+  📄 Download Anomaly Report (PDF)
+</button>
+
+
+<script>
+let anomalyChart;
+
+// Load product list
+fetch("/products")
+  .then(r => r.json())
+  .then(products => {
+    const select = document.getElementById("productSelect");
+    products.forEach(p => {
+      const opt = document.createElement("option");
+      opt.value = p.product_name;
+      opt.textContent = p.product_name;
+      select.appendChild(opt);
+    });
+  });
+
+function loadAnomalies(product="") {
+  fetch(`/anomalies${product ? `?product=${product}` : ""}`)
+    .then(r => r.json())
+    .then(d => {
+
+      const dates = d.data.map(x => x.ds);
+      const sales = d.data.map(x => x.units_sold);
+      const anomalyPoints = d.data.map(x => x.anomaly ? x.units_sold : null);
+
+      // Summary
+      document.getElementById("anomalyCount").innerHTML =
+        `Detected Anomalies: <b>${d.count}</b>`;
+
+      document.getElementById("aiInsight").innerText =
+        d.count > 0
+          ? "Unusual sales patterns detected. Review promotions, pricing, or supply issues."
+          : "Sales behavior appears stable.";
+
+      // Chart
+      if (anomalyChart) anomalyChart.destroy();
+
+      anomalyChart = new Chart(
+        document.getElementById("anomalyChart"),
+        {
+          type: "line",
+          data: {
+            labels: dates,
+            datasets: [
+              {
+                label: "Sales",
+                data: sales,
+                borderColor: "#2563eb",
+                tension: 0.3
+              },
+              {
+                label: "Anomalies",
+                data: anomalyPoints,
+                pointBackgroundColor: "#ef4444",
+                pointRadius: 6,
+                showLine: false
+              }
+            ]
+          }
+        }
+      );
+
+      // Table (✅ FIXED)
+     const tbody = document.getElementById("anomalyTableBody");
+
+      tbody.innerHTML = "";
+
+      d.data.filter(x => x.anomaly).forEach(row => {
+        tbody.innerHTML += `
+          <tr>
+            <td>${row.ds}</td>
+            <td>${row.units_sold}</td>
+            <td><span class="badge ${row.severity}">${row.severity}</span></td>
+            <td>${row.reason}</td>
+          </tr>
+        `;
+      });
+    });
+}
+
+// Initial load
+loadAnomalies();
+
+// Product change
+document.getElementById("productSelect").addEventListener("change", e => {
+  loadAnomalies(e.target.value);
+});
+</script>
+
+
+
+<style>
+/* ---------- TABLE FIX ---------- */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+thead {
+  background: #f9fafb;
+}
+
+th, td {
+  padding: 12px 10px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: center;
+  font-size: 14px;
+}
+
+/* Column widths */
+th:nth-child(1), td:nth-child(1) { width: 20%; } /* Date */
+th:nth-child(2), td:nth-child(2) { width: 20%; } /* Units */
+th:nth-child(3), td:nth-child(3) { width: 20%; } /* Severity */
+th:nth-child(4), td:nth-child(4) { width: 40%; } /* Reason */
+
+/* Prevent text breaking layout */
+td {
+  word-wrap: break-word;
+}
+
+/* ---------- BADGES ---------- */
+.badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: bold;
+  color: white;
+}
+
+.badge.Mild { background: #22c55e; }
+.badge.Moderate { background: #f59e0b; }
+.badge.Critical { background: #ef4444; }
+</style>
+
+
+{% endblock %}

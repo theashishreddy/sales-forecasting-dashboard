@@ -1,0 +1,20 @@
+date,product_id,product_name,category,units_sold,price,revenue,region,is_promo
+01-01-2024,P001,Wireless Earbuds,Electronics,120,2999,359880,South,1
+02-01-2024,P001,Wireless Earbuds,Electronics,95,2999,284905,South,0
+03-01-2024,P001,Wireless Earbuds,Electronics,140,2799,391860,South,1
+,,,,,,,,
+04-01-2024,P002,Smart Watch,Electronics,85,4999,424915,North,0
+05-01-2024,P002,Smart Watch,Electronics,110,4799,527890,North,1
+06-01-2024,P002,Smart Watch,Electronics,98,4999,489902,North,0
+,,,,,,,,
+07-01-2024,P003,Laptop Backpack,Accessories,150,1999,299850,East,1
+08-01-2024,P003,Laptop Backpack,Accessories,130,1999,259870,East,0
+09-01-2024,P003,Laptop Backpack,Accessories,165,1899,313335,East,1
+,,,,,,,,
+10-01-2024,P004,Office Chair,Furniture,60,8999,539940,West,0
+11-01-2024,P004,Office Chair,Furniture,75,8499,637425,West,1
+12-01-2024,P004,Office Chair,Furniture,55,8999,494945,West,0
+,,,,,,,,
+13-01-2024,P005,Bluetooth Speaker,Electronics,180,2499,449820,South,1
+14-01-2024,P005,Bluetooth Speaker,Electronics,160,2499,399840,South,0
+15-01-2024,P005,Bluetooth Speaker,Electronics,195,2299,448305,South,1

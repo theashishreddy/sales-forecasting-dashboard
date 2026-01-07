@@ -1,0 +1,316 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+  .header {
+    background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+    color: white;
+    text-align: center;
+    padding: 60px 20px;
+    border-radius: 0 0 30px 30px;
+    margin-bottom: 40px;
+  }
+  .header h1 {
+    font-size: 3em;
+    margin: 0;
+  }
+  .header p {
+    font-size: 1.3em;
+    opacity: 0.9;
+    margin: 10px 0 0;
+  }
+
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 25px;
+    max-width: 1400px;
+    margin: 0 auto 50px;
+    padding: 0 20px;
+  }
+  .kpi-card {
+    background: white;
+    border-radius: 16px;
+    padding: 30px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    transition: transform 0.3s;
+  }
+  .kpi-card:hover {
+    transform: translateY(-10px);
+  }
+  .kpi-card .icon {
+    font-size: 3em;
+    margin-bottom: 15px;
+  }
+  .kpi-card .value {
+    font-size: 2.5em;
+    font-weight: bold;
+    margin: 10px 0;
+  }
+  .kpi-card .label {
+    font-size: 1.2em;
+    color: #666;
+  }
+
+  .charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 30px;
+    max-width: 1400px;
+    margin: 0 auto 60px;
+    padding: 0 20px;
+  }
+  .chart-card {
+    background: white;
+    border-radius: 16px;
+    padding: 25px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+  }
+  .chart-card h3 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #1e40af;
+  }
+
+  .export-section {
+    text-align: center;
+    margin: 50px 0;
+  }
+</style>
+
+<div class="header">
+  <h1>📊 Sales Intelligence Overview</h1>
+  <p>Key business insights • Updated: January 07, 2026</p>
+</div>
+
+<!-- KPI Cards -->
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="icon">💰</div>
+    <div class="value" id="totalRevenue">—</div>
+    <div class="label">Total Revenue (Last 30 Days)</div>
+  </div>
+  <div class="kpi-card">
+    <div class="icon">📈</div>
+    <div class="value" id="forecastGrowth">—</div>
+    <div class="label">Forecasted Growth (Next 30 Days)</div>
+  </div>
+  <div class="kpi-card">
+    <div class="icon">😊</div>
+    <div class="value" id="sentimentScore">—</div>
+    <div class="label">Customer Sentiment Score</div>
+  </div>
+  <div class="kpi-card">
+    <div class="icon">🌍</div>
+    <div class="value" id="topRegion">—</div>
+    <div class="label">Top Performing Region</div>
+  </div>
+  <div class="kpi-card">
+    <div class="icon">💡</div>
+    <div class="value" id="optimalPrice">—</div>
+    <div class="label">Recommended Price Change</div>
+  </div>
+  <div class="kpi-card">
+    <div class="icon">🚨</div>
+    <div class="value" id="anomalyCount">—</div>
+    <div class="label">Sales Anomalies Detected</div>
+  </div>
+</div>
+
+<!-- Mini Charts -->
+<div class="charts-grid">
+  <div class="chart-card">
+    <h3>📈 30-Day Sales Forecast Trend</h3>
+    <canvas id="forecastMiniChart" height="200"></canvas>
+  </div>
+  <div class="chart-card">
+    <h3>💬 Customer Sentiment Distribution</h3>
+    <canvas id="sentimentMiniChart" height="200"></canvas>
+  </div>
+  <div class="chart-card">
+    <h3>🌍 Revenue by Region</h3>
+    <canvas id="regionMiniChart" height="200"></canvas>
+  </div>
+</div>
+
+<!-- Export Button -->
+<div class="export-section">
+  <button id="exportBtn" onclick="exportOverviewToPDF()"
+          style="padding: 16px 36px; font-size: 18px; background: #1e40af; color: white; border: none; border-radius: 12px; cursor: pointer; box-shadow: 0 6px 20px rgba(30,64,175,0.3); font-weight: bold;">
+    📄 Export Overview to PDF
+  </button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script>
+let miniCharts = {};
+
+// Load all data
+Promise.all([
+  fetch("/forecast").then(r => r.json()).catch(() => ({})),
+  fetch("/sentiment").then(r => r.json()).catch(() => ({})),
+  fetch("/geo-analysis").then(r => r.json()).catch(() => ({})),
+  fetch("/price-optimize").then(r => r.json()).catch(() => ({})),
+  fetch("/anomalies").then(r => r.json()).catch(() => ({}))
+])
+.then(([forecast, sentiment, geo, pricing, anomalies]) => {
+  // Total Revenue placeholder
+  document.getElementById("totalRevenue").innerText = "₹12.4L";
+
+  // Forecast Growth
+  if (forecast.forecast?.length > 0 && forecast.actual?.length > 0) {
+    const lastActual = forecast.actual[forecast.actual.length - 1]?.y || 0;
+    const nextForecast = forecast.forecast[forecast.forecast.length - 1]?.yhat || 0;
+    const growth = lastActual > 0 ? ((nextForecast - lastActual) / lastActual * 100).toFixed(1) : 0;
+    document.getElementById("forecastGrowth").innerText = growth > 0 ? `+${growth}%` : `${growth}%`;
+    document.getElementById("forecastGrowth").style.color = growth > 0 ? "#16a34a" : "#dc2626";
+  }
+
+  // Sentiment Score
+  if (sentiment.avg_sentiment !== undefined) {
+    document.getElementById("sentimentScore").innerText = (sentiment.avg_sentiment > 0 ? "+" : "") + sentiment.avg_sentiment.toFixed(2);
+    document.getElementById("sentimentScore").style.color = sentiment.avg_sentiment > 0 ? "#16a34a" : "#dc2626";
+  }
+
+  // Top Region
+  if (geo.regions?.length > 0) {
+    const top = geo.regions.reduce((a, b) => (a.total_revenue > b.total_revenue ? a : b));
+    document.getElementById("topRegion").innerText = top.region;
+  }
+
+  // Optimal Price
+  if (pricing.optimal_price) {
+    document.getElementById("optimalPrice").innerText = `₹${Number(pricing.optimal_price).toLocaleString("en-IN")}`;
+  }
+
+  // Anomalies
+  document.getElementById("anomalyCount").innerText = anomalies.count || 0;
+
+  // Mini Forecast Line Chart
+  if (forecast.forecast?.length > 0) {
+    new Chart(document.getElementById("forecastMiniChart"), {
+      type: "line",
+      data: {
+        labels: forecast.forecast.slice(-30).map(d => new Date(d.ds).toLocaleDateString("en-IN", { month: "short", day: "numeric" })),
+        datasets: [{
+          label: "Forecast",
+          data: forecast.forecast.slice(-30).map(d => Math.round(d.yhat)),
+          borderColor: "#3b82f6",
+          backgroundColor: "rgba(59,130,246,0.1)",
+          fill: true,
+          tension: 0.4,
+          pointRadius: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: false } }
+      }
+    });
+  }
+
+  // Mini Sentiment Doughnut Chart - NOW FIXED AND VISIBLE
+  new Chart(document.getElementById("sentimentMiniChart"), {
+    type: "doughnut",
+    data: {
+      labels: ["Positive", "Neutral", "Negative"],
+      datasets: [{
+        data: [
+          sentiment.positive_count || 0,
+          sentiment.neutral_count || 0,
+          sentiment.negative_count || 0
+        ],
+        backgroundColor: ["#22c55e", "#eab308", "#ef4444"],
+        borderWidth: 4,
+        borderColor: "#ffffff"
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          position: "bottom",
+          labels: {
+            padding: 20,
+            usePointStyle: true,
+            pointStyle: "circle"
+          }
+        }
+      },
+      cutout: "65%"
+    }
+  });
+
+  // Mini Region Bar Chart
+  if (geo.regions?.length > 0) {
+    new Chart(document.getElementById("regionMiniChart"), {
+      type: "bar",
+      data: {
+        labels: geo.regions.map(r => r.region),
+        datasets: [{
+          label: "Revenue",
+          data: geo.regions.map(r => r.total_revenue),
+          backgroundColor: "#60a5fa"
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
+    });
+  }
+})
+.catch(err => console.error("Dashboard load error:", err));
+
+// PDF Export Function (unchanged)
+function exportOverviewToPDF() {
+  const button = document.getElementById("exportBtn");
+  const originalText = button.innerText;
+  button.disabled = true;
+  button.innerText = "⏳ Generating PDF...";
+
+  html2canvas(document.body, {
+    scale: 2,
+    useCORS: true,
+    backgroundColor: "#f8fafc",
+    logging: false
+  }).then(canvas => {
+    const imgData = canvas.toDataURL("image/png");
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "pt",
+      format: "a4"
+    });
+
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+    const imgWidth = canvas.width;
+    const imgHeight = canvas.height;
+    const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+    const imgX = (pdfWidth - imgWidth * ratio) / 2;
+    const imgY = 30;
+
+    pdf.addImage(imgData, "PNG", imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+    pdf.save("Sales_Intelligence_Overview_January_2026.pdf");
+
+    button.disabled = false;
+    button.innerText = originalText;
+  }).catch(err => {
+    console.error("PDF export failed:", err);
+    alert("Failed to generate PDF. Please try again.");
+    button.disabled = false;
+    button.innerText = originalText;
+  });
+}
+</script>
+
+{% endblock %}

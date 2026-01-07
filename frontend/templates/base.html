@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{{ title if title else "Sales Intelligence" }}{% endblock %}</title>
+  
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  
+  <!-- Leaflet for Geo page -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+        integrity="sha256-sA+Z2Q0QwkXQXs41MTrNE3Y8rOWaPqSR5K0n5j3f+8A=" 
+        crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+          integrity="sha256-o9N1jGDZrf5tS+Ft4gbIK7mYMipq9lqpVJ91oT58g9I=" 
+          crossorigin=""></script>
+
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --text: #0f172a;
+      --nav-bg: #1e293b;
+      --card-bg: #ffffff;
+      --accent: #22c55e;
+      --accent-hover: #16a34a;
+      --border: #e2e8f0;
+    }
+
+    [data-theme="dark"] {
+      --bg: #0f172a;
+      --text: #f1f5f9;
+      --nav-bg: #020617;
+      --card-bg: #1e293b;
+      --border: #334155;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    nav {
+      background: var(--nav-bg);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    nav a {
+      color: #cbd5e1;
+      text-decoration: none;
+      font-weight: 600;
+      padding: 8px 12px;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+
+    nav a:hover {
+      color: white;
+      background: rgba(255,255,255,0.1);
+    }
+
+    nav a.active {
+      color: var(--accent);
+      background: rgba(34,197,94,0.15);
+      font-weight: 700;
+    }
+
+    .spacer {
+      flex-grow: 1;
+    }
+
+    .toggle {
+      cursor: pointer;
+      color: #e2e8f0;
+      font-size: 15px;
+      font-weight: 500;
+      padding: 8px 16px;
+      border-radius: 8px;
+      transition: background 0.2s;
+    }
+
+    .toggle:hover {
+      background: rgba(255,255,255,0.1);
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 30px 20px;
+      min-height: calc(100vh - 80px);
+    }
+
+    /* Smooth transitions */
+    html, body, .card, nav, footer {
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="{{ 'active' if request.path == '/' else '' }}">Home</a>
+  <a href="/final-dashboard" class="{{ 'active' if request.path == '/final-dashboard' else '' }}">Dashboard</a>
+  <a href="/forecasting" class="{{ 'active' if request.path == '/forecasting' else '' }}">Forecast</a>
+  <a href="/anomaly" class="{{ 'active' if request.path == '/anomaly' else '' }}">Anomaly</a>
+  <a href="/pricing" class="{{ 'active' if request.path == '/pricing' else '' }}">Pricing</a>
+  <a href="/promotion" class="{{ 'active' if request.path == '/promotion' else '' }}">Promotion</a>
+  <a href="/geo" class="{{ 'active' if request.path == '/geo' else '' }}">Geospatial</a>
+  <a href="/sentiment-page" class="{{ 'active' if request.path == '/sentiment-page' else '' }}">Sentiment</a>
+
+  <div class="spacer"></div>
+  <div class="toggle" onclick="toggleTheme()">
+    <span data-theme="light">🌙 Dark Mode</span>
+    <span data-theme="dark" style="display:none;">☀️ Light Mode</span>
+  </div>
+</nav>
+
+<div class="container">
+  {% block content %}{% endblock %}
+</div>
+
+<script>
+function toggleTheme() {
+  const html = document.documentElement;
+  const isDark = html.dataset.theme === "dark";
+  html.dataset.theme = isDark ? "light" : "dark";
+
+  // Update toggle text
+  document.querySelectorAll('.toggle span').forEach(span => {
+    span.style.display = span.getAttribute('data-theme') === html.dataset.theme ? 'inline' : 'none';
+  });
+}
+
+// Initialize toggle text on load
+document.addEventListener("DOMContentLoaded", () => {
+  const html = document.documentElement;
+  document.querySelectorAll('.toggle span').forEach(span => {
+    span.style.display = span.getAttribute('data-theme') === html.dataset.theme ? 'inline' : 'none';
+  });
+});
+</script>
+
+</body>
+</html>

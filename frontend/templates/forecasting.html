@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>📈 Sales Forecast</h2>
+
+<!-- PRODUCT & DAYS SELECT -->
+<div style="display:flex; gap:15px; margin-bottom:20px; flex-wrap:wrap;">
+  <select id="productSelect" style="flex:1; min-width:250px; padding:8px; font-size:16px;">
+    <option value="">All Products (Overall)</option>
+  </select>
+  <select id="daysSelect" style="flex:1; min-width:200px; padding:8px; font-size:16px;">
+    <option value="7">7-Day Forecast</option>
+    <option value="30" selected>30-Day Forecast</option>
+    <option value="90">90-Day Forecast</option>
+  </select>
+</div>
+
+<!-- FORECAST CHART -->
+<div class="card">
+  <canvas id="forecastChart" height="120"></canvas>
+</div>
+
+<!-- AI SUMMARY -->
+<div class="card" style="margin-top:20px;">
+  <h3>🤖 AI Forecast Summary</h3>
+  <p id="aiSummary">Loading insights...</p>
+</div>
+
+<!-- ACCURACY -->
+<div class="card" style="margin-top:20px;">
+  <h3>📐 Forecast Accuracy</h3>
+  <p id="accuracyBox">Loading accuracy...</p>
+</div>
+
+<!-- DOWNLOADS -->
+<div class="card" style="margin-top:20px;">
+  <button onclick="window.location.href='/download-forecast-pdf'">
+    📄 Download Forecast Report (PDF)
+  </button>
+</div>
+
+<div class="card" style="margin-top:20px;">
+  <button onclick="window.location.href='/download-forecast-bundle'">
+    📦 Download Forecast (CSV + PDF)
+  </button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+let chart = null;
+
+/* ---------- LOAD PRODUCTS ---------- */
+fetch("/products")
+  .then(r => r.json())
+  .then(products => {
+    const select = document.getElementById("productSelect");
+    products.forEach(p => {
+      const opt = document.createElement("option");
+      opt.value = p.product_name;
+      opt.textContent = p.product_name;
+      select.appendChild(opt);
+    });
+    loadForecast(""); // Load overall forecast by default
+  });
+
+/* ---------- LOAD FORECAST ---------- */
+function loadForecast(product) {
+  const days = parseInt(document.getElementById("daysSelect").value);
+  const query = product ? `product=${encodeURIComponent(product)}&days=${days}` : `days=${days}`;
+
+  fetch(`/forecast?${query}`)
+    .then(r => r.json())
+    .then(data => {
+      if (!data.forecast || data.forecast.length === 0) {
+        document.getElementById("aiSummary").innerText = "No data available. Upload sales.csv to see forecast.";
+        document.getElementById("accuracyBox").innerHTML = "No accuracy metrics available.";
+        if (chart) chart.destroy();
+        const ctx = document.getElementById("forecastChart").getContext("2d");
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        ctx.font = "20px Arial";
+        ctx.fillStyle = "#666";
+        ctx.textAlign = "center";
+        ctx.fillText("No data available", ctx.canvas.width / 2, ctx.canvas.height / 2);
+        return;
+      }
+
+      // Calculate display range: last (days + buffer) points
+      const historyBuffer = days <= 7 ? 7 : days <= 30 ? 14 : 30;
+      const totalDisplayPoints = days + historyBuffer;
+      const startIndex = Math.max(0, data.forecast.length - totalDisplayPoints);
+
+      const displayData = data.forecast.slice(startIndex);
+
+      // Filter actual data to match display range
+      const displayActual = data.actual.filter(a => 
+        new Date(a.ds) >= new Date(displayData[0].ds)
+      );
+
+      if (chart) chart.destroy();
+
+      chart = new Chart(document.getElementById("forecastChart"), {
+        type: "line",
+        data: {
+          labels: displayData.map(d => d.ds),
+          datasets: [
+            {
+              label: "Actual Sales",
+              data: displayActual.map(d => ({ x: d.ds, y: d.y })),
+              borderColor: "#2563eb",
+              backgroundColor: "#2563eb",
+              tension: 0.3,
+              pointRadius: 4,
+              fill: false
+            },
+            {
+              label: "Forecast",
+              data: displayData.map(d => ({ x: d.ds, y: d.yhat })),
+              borderColor: "#22c55e",
+              borderDash: [8, 4],
+              tension: 0.3,
+              pointRadius: 3,
+              fill: false
+            },
+            {
+              label: "Upper Bound",
+              data: displayData.map(d => ({ x: d.ds, y: d.yhat_upper })),
+              borderColor: "rgba(34,197,94,0.2)",
+              backgroundColor: "rgba(34,197,94,0.1)",
+              fill: "+1",
+              pointRadius: 0
+            },
+            {
+              label: "Lower Bound",
+              data: displayData.map(d => ({ x: d.ds, y: d.yhat_lower })),
+              borderColor: "rgba(34,197,94,0.2)",
+              fill: false,
+              pointRadius: 0
+            }
+          ]
+        },
+        options: {
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: (context) => `${context.dataset.label}: ${Math.round(context.parsed.y)} units`
+              }
+            },
+            legend: {
+              position: "top"
+            }
+          },
+          scales: {
+            x: {
+              ticks: {
+                autoSkip: true,
+                maxRotation: 45,
+                minRotation: 45
+              }
+            },
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
+    })
+    .catch(err => console.error("Forecast load error:", err));
+
+  // AI Summary & Accuracy (unchanged)
+  fetch(`/forecast-ai-summary?${query}`)
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById("aiSummary").innerText = d.ai_summary || "No AI insights available.";
+    });
+
+  fetch(`/forecast-accuracy?${query}`)
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById("accuracyBox").innerHTML =
+        `<b>MAPE:</b> ${d.mape}%<br>
+         <b>RMSE:</b> ${d.rmse}<br>
+         <small>Evaluated on ${d.points_evaluated} points</small>`;
+    });
+}
+
+/* ---------- EVENT LISTENERS ---------- */
+document.getElementById("productSelect").addEventListener("change", function () {
+  loadForecast(this.value);
+});
+
+document.getElementById("daysSelect").addEventListener("change", function () {
+  loadForecast(document.getElementById("productSelect").value);
+});
+</script>
+
+{% endblock %}

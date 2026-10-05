@@ -7,7 +7,7 @@ scikit-learn
 xgboost
 prophet
 vaderSentiment
-sqlite3
+
 pillow
 geopandas
 requests

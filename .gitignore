@@ -1,0 +1,22 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Uploads and temporary data
+backend/uploads/*
+!backend/uploads/default
+!backend/uploads/default/sales.csv
+!backend/uploads/default/reviews.csv
+
+# Environment variables
+.env
+
+# IDEs
+.vscode/
+.idea/

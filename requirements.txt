@@ -7,9 +7,9 @@ scikit-learn
 xgboost
 prophet
 vaderSentiment
-
 pillow
 geopandas
 requests
 openai
 gunicorn
+reportlab
